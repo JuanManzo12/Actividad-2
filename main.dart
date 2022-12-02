@@ -1,81 +1,74 @@
 import 'package:flutter_application_1/main.dart';
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-//import 'package:barra_lateral/page/main.dart';
+import 'package:http/http.dart' as http;
 
-void main() => runApp(const MyApp());
+Future<Post> fetchPost() async {
+  final response =
+      await http.get('https://jsonplaceholder.typicode.com/posts/1');
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  if (response.statusCode == 200) {
+    // Si la llamada al servidor fue exitosa, analiza el JSON
+    return Post.fromJson(json.decode(response.body));
+  } else {
+    // Si la llamada no fue exitosa, lanza un error.
+    throw Exception('Failed to load post');
+  }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Material App',
-      home: Home(),
+class Post {
+  final int userId;
+  final int id;
+  final String title;
+  final String body;
+
+  Post({this.userId, this.id, this.title, this.body});
+
+  factory Post.fromJson(Map<String, dynamic> json) {
+    return Post(
+      userId: json['userId'],
+      id: json['id'],
+      title: json['title'],
+      body: json['body'],
     );
   }
 }
 
-class Home extends StatelessWidget {
-  const Home({
-    Key? key,
-  }) : super(key: key);
+void main() => runApp(MyApp(post: fetchPost()));
+
+class MyApp extends StatelessWidget {
+  final Future<Post> post;
+
+  MyApp({Key key, this.post}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      drawer: Drawer(
-        child: ListView(
-          padding: const EdgeInsets.only(top: 23.0, bottom: 10),
-          children: <Widget>[
-            const DrawerHeader(
-              margin: EdgeInsets.only(top: 58.0),
-              decoration: BoxDecoration(
-                color: Colors.black,
-                image: DecorationImage(
-                  image: AssetImage("Imagenes/Hola.jpg"),
-                ),
-              ),
-              child: Text(
-                "Opciones",
-                style: TextStyle(
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white),
-              ),
-            ),
-            ListTile(
-              title: const Text("Inicio"),
-              leading: const Icon(Icons.home),
-              onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const Inicio()));
-              },
-            ),
-            ListTile(
-              title: const Text("Catálogos"),
-              leading: const Icon(Icons.settings),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text("FeedBack"),
-              leading: const Icon(Icons.border_color),
-              onTap: () {},
-            ),
-            ListTile(
-              title: const Text("Salir"),
-              leading: const Icon(Icons.exit_to_app),
-              onTap: () {},
-            ),
-          ],
+    return MaterialApp(
+      title: 'Fetch Data Example',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Fetch Data Example'),
         ),
-      ),
-      appBar: AppBar(
-        title: const Text('Menú Lateral'),
-      ),
-      body: const Center(
-        child: Text('Hello World'),
+        body: Center(
+          child: FutureBuilder<Post>(
+            future: post,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Text(snapshot.data.title);
+              } else if (snapshot.hasError) {
+                return Text("${snapshot.error}");
+              }
+
+              // Por defecto, muestra un loading spinner
+              return CircularProgressIndicator();
+            },
+          ),
+        ),
       ),
     );
   }
